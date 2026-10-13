@@ -88,7 +88,25 @@ function ai_request(url, key, model, messages, timeout_s) {
             result["text"] = data["choices"][0]["message"]["content"]
             result["ok"] = true
         } else {
-            result["error"] = "HTTP " + str(response.status)
+            // Keep the server's message, not just its status. "HTTP 502" gives
+            // the user nothing to act on; "HTTP 502: upstream error: HTTP Error
+            // 405" tells them the proxy is the thing that is down, which is a
+            // different problem from a bad key or a wrong URL, and a different
+            // fix.
+            detail = response.body.trim()
+            msg = ""
+            if detail != "" {
+                try {
+                    e = json.parse(detail)
+                    if e["error"] != null and e["error"]["message"] != null {
+                        msg = e["error"]["message"]
+                    }
+                } catch err { }
+                if msg == "" and len(detail) < 200 { msg = detail }
+                if len(msg) > 200 { msg = msg.slice(0, 200) + "..." }
+            }
+            result["error"] = "HTTP " + str(response.status) +
+                              (msg == "" ? "" : ": " + msg)
         }
     } catch e {
         result["error"] = str(e)
