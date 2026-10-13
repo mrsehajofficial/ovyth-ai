@@ -77,7 +77,8 @@ function ai_request(url, key, model, messages, timeout_s) {
             },
             json = {
                 "model": model,
-                "messages": messages
+                "messages": messages,
+                "think": false
             },
             timeout = timeout_s
         )
