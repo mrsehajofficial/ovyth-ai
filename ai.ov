@@ -60,7 +60,30 @@ function ai_trim(messages, keep) {
 }
 
 // The transport. `messages` is the full conversation; `timeout_s` is seconds.
+// An OpenAI-compatible endpoint path. Ollama, llama.cpp, LocalAI and vLLM
+// all serve one at /v1/chat/completions on the bare host.
+ai_path = "/v1/chat/completions"
+
+// A bare host means "the OpenAI-compatible endpoint on it".
+//
+// Without this, pointing at http://127.0.0.1:11434 gets a 405 from the server
+// root — Ollama answers GET / with "Ollama is running" and rejects everything
+// else — which is a confusing way to learn the path. With it, the host alone
+// is a complete configuration.
+function ai_normalize_url(url) {
+    if !url.contains("://") { return url }
+    rest = url.slice(url.indexof("://") + 3, len(url))
+    slash = rest.indexof("/")
+    if slash >= 0 {
+        path = rest.slice(slash, len(rest))
+        if path != "" and path != "/" { return url }
+    }
+    if url.endswith("/") { return url + ai_path.slice(1, len(ai_path)) }
+    return url + ai_path
+}
+
 function ai_request(url, key, model, messages, timeout_s) {
+    url = ai_normalize_url(url)
     result = {
         "ok": false,
         "text": "",
