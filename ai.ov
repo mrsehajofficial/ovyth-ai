@@ -109,8 +109,18 @@ function ai_request(url, key, model, messages, timeout_s) {
         result["elapsed_ms"] = response.elapsed_ms
         if response.status == 200 {
             data = json.parse(response.body)
-            result["text"] = data["choices"][0]["message"]["content"]
-            result["ok"] = true
+            text = data["choices"][0]["message"]["content"]
+            // A 200 with no message content in it is not a success. Some
+            // gateways answer that way, and reporting ok with a nil text means
+            // every caller has to check for nil after being told it worked --
+            // so the shape is validated here, once, where the response is
+            // still in hand.
+            if text == null {
+                result["error"] = "the endpoint replied with no message content"
+            } else {
+                result["text"] = text
+                result["ok"] = true
+            }
         } else {
             // Keep the server's message, not just its status. "HTTP 502" gives
             // the user nothing to act on; "HTTP 502: upstream error: HTTP Error
